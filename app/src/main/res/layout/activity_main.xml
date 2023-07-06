@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/librar"
+    android:alpha="0.7"
+    tools:context=".MainActivity">
+
+<!--    <ImageView-->
+<!--        android:layout_width="250dp"-->
+<!--        android:layout_height="100dp"-->
+<!--        android:background="@drawable/logo"-->
+<!--        android:layout_marginTop="12dp"-->
+<!--        android:elevation="12dp"-->
+<!--        android:layout_marginStart="32dp"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent"/>-->
+
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent">-->
+
+<!--        <ImageView-->
+<!--            android:id="@+id/im_clg"-->
+<!--            android:layout_width="120dp"-->
+<!--            android:layout_height="100dp"-->
+<!--            android:background="@drawable/col"/>-->
+
+
+<!--    </LinearLayout>-->
+
+
+
+<!--    <TextView-->
+<!--        android:id="@+id/tv_status_heading"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginStart="18dp"-->
+<!--        android:layout_marginTop="24dp"-->
+<!--        android:text="Status:"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toBottomOf="@+id/im_clg"/>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/tvStatus"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginTop="12dp"-->
+<!--        android:layout_marginStart="4dp"-->
+<!--        app:layout_constraintBottom_toBottomOf="@+id/tv_status_heading"-->
+<!--        app:layout_constraintStart_toEndOf="@+id/tv_status_heading"-->
+<!--        app:layout_constraintTop_toTopOf="@+id/tv_status_heading" />-->
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="2"
+        android:text="Welcome To Library Kiosk"
+        android:textColor="@color/white"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:layout_marginTop="100dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_start"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginTop="24dp"
+        android:text="Click To Start"
+        android:textAllCaps="false"
+        android:elevation="12dp"
+        app:cornerRadius="20dp"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:backgroundTint="#00FFFFFF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/message"/>
+
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

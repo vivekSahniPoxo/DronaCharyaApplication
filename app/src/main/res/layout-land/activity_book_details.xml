@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".BookDetails.ConnectUSBActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/search_view"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:iconifiedByDefault="false"
+            android:layout_marginStart="18dp"
+            android:layout_marginEnd="18dp"
+            android:layout_marginTop="12sp"
+            android:paddingStart="8pt"
+            android:visibility="gone"
+            android:gravity="center"
+            android:background="@drawable/bg_box"
+            android:queryHint="Search by RfidNo..."
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+
+        <Button
+            android:id="@+id/btn_test"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Test"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+
+    <TextView
+        android:id="@+id/tv_automated_library"
+        android:layout_width="350dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="2"
+        android:visibility="gone"
+        android:text="Automated Library Dropbox"
+        android:textColor="@color/default_color"
+        android:textSize="38sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@+id/im_logo"
+        app:layout_constraintBottom_toBottomOf="@+id/im_clg_logo"
+        app:layout_constraintStart_toEndOf="@+id/im_clg_logo"
+        app:layout_constraintTop_toTopOf="@+id/im_clg_logo" />
+
+    <ImageView
+        android:id="@+id/im_book_logo"
+        android:layout_width="200dp"
+        android:layout_height="300dp"
+        android:visibility="gone"
+        android:background="@drawable/book"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@+id/tv_automated_library"
+        app:layout_constraintEnd_toEndOf="@+id/tv_automated_library"
+        app:layout_constraintStart_toStartOf="@+id/tv_automated_library"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnTestUSB"
+        android:layout_width="700dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="24dp"
+        android:text="Click Here"
+        android:textAllCaps="false"
+        app:cornerRadius="20dp"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:backgroundTint="@color/default_color"
+        app:layout_constraintStart_toStartOf="@+id/im_clg_logo"
+        app:layout_constraintEnd_toEndOf="@+id/im_logo"
+        app:layout_constraintTop_toBottomOf="@+id/im_book_logo"/>
+
+
+
+
+
+
+
+    <ImageView
+        android:id="@+id/im_clg_logo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/dayanand_college"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/im_logo"
+        android:layout_width="200dp"
+        android:layout_height="100dp"
+        android:background="@drawable/white_logo"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <LinearLayout
+        android:id="@+id/linearlayoutdevices"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toStartOf="@+id/im_logo"
+        app:layout_constraintStart_toEndOf="@+id/im_clg_logo"
+        app:layout_constraintTop_toTopOf="@id/im_clg_logo"/>
+
+
+
+
+    <TextView
+        android:id="@+id/tv_book_info"
+        android:layout_width="700dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="8dp"
+        android:text="Book Info"
+        android:textColor="@color/white"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:background="@drawable/book_info_bg"
+        app:layout_constraintTop_toBottomOf="@+id/im_clg_logo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/book_list"
+        android:layout_width="700dp"
+        android:layout_height="250dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginStart="56dp"
+        android:layout_marginEnd="56dp"
+        android:backgroundTint="@color/green"
+        tools:listitem="@layout/book_details"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintStart_toStartOf="@+id/tv_book_info"
+        app:layout_constraintEnd_toEndOf="@+id/tv_book_info"
+        app:layout_constraintTop_toBottomOf="@+id/tv_book_info"/>
+
+    <TextView
+        android:id="@+id/tv_drop_box"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Please drop book one by one"
+        android:textColor="@color/red"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="@+id/tv_total_count"
+        app:layout_constraintTop_toBottomOf="@+id/tv_total_count"/>
+
+        <TextView
+            android:id="@+id/tv_total_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            app:layout_constraintTop_toBottomOf="@+id/tv_book_statue"
+            app:layout_constraintStart_toStartOf="@+id/tv_book_statue"/>
+
+
+        <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_print"
+        android:layout_width="200dp"
+        android:layout_height="70dp"
+        android:layout_marginStart="24dp"
+        android:backgroundTint="@color/green"
+        android:text="Print"
+        android:textSize="30sp"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp"
+        app:strokeColor="@color/default_color"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toBottomOf="@+id/tv_drop_box"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_back"
+            android:layout_width="200dp"
+            android:layout_height="70dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="32dp"
+            android:backgroundTint="@color/green"
+            android:text="Back"
+            android:textSize="30sp"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            app:strokeColor="@color/default_color"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toBottomOf="@+id/tv_drop_box"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <ImageView
+            android:id="@+id/im_crop_box"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/printer_not_connected"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/im_connectivity" />
+
+        <ImageView
+            android:id="@+id/im_connectivity"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/not_connected"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="12dp"
+            app:layout_constraintStart_toEndOf="@id/im_crop_box"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+    <!--    <LinearLayout-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        app:layout_constraintEnd_toEndOf="@+id/linearlayoutdevices"-->
+    <!--        app:layout_constraintStart_toStartOf="@+id/linearlayoutdevices"-->
+    <!--        app:layout_constraintTop_toBottomOf="@+id/tv_book_info">-->
+
+
+
+    <!--        <com.google.android.material.card.MaterialCardView-->
+    <!--            android:id="@+id/m_card_view"-->
+    <!--            android:layout_width="700dp"-->
+    <!--            android:layout_height="500dp"-->
+    <!--            android:layout_gravity="center"-->
+    <!--            android:visibility="gone"-->
+    <!--            app:cardBackgroundColor="@color/white"-->
+    <!--            app:cardCornerRadius="10dp"-->
+    <!--            app:cardElevation="8dp"-->
+    <!--            app:cardMaxElevation="8dp"-->
+    <!--            app:cardPreventCornerOverlap="true"-->
+    <!--            app:cardUseCompatPadding="true"-->
+    <!--            app:layout_constraintEnd_toEndOf="@+id/tv_drop_box"-->
+    <!--            app:layout_constraintStart_toStartOf="@+id/tv_drop_box"-->
+    <!--            app:layout_constraintTop_toBottomOf="@+id/im_clg_logo">-->
+
+
+
+
+    <!--            <LinearLayout-->
+    <!--                android:layout_width="match_parent"-->
+    <!--                android:layout_height="wrap_content"-->
+    <!--                android:layout_marginStart="16dp"-->
+    <!--                android:layout_marginTop="8dp"-->
+    <!--                android:layout_marginEnd="16dp"-->
+    <!--                android:layout_marginBottom="8dp"-->
+    <!--                android:orientation="vertical">-->
+
+
+
+    <!--                &lt;!&ndash;                <TextView&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:id="@+id/tv_drop_box"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:layout_width="match_parent"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:layout_height="wrap_content"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:layout_marginStart="18dp"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:layout_marginTop="24dp"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:text="Please drop book one by one"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:textColor="@color/black"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:textSize="20sp"&ndash;&gt;-->
+    <!--                &lt;!&ndash;                    android:textStyle="bold" />&ndash;&gt;-->
+
+    <TextView
+        android:id="@+id/tv_rfid"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="36dp"
+        android:background="@drawable/bg_box"
+        android:gravity="center"
+        android:iconifiedByDefault="false"
+        android:paddingStart="8pt"
+        android:queryHint="Search by RfidNo..."
+        android:textColor="@color/black"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_drop_box" />
+
+
+    <!--                <LinearLayout-->
+    <!--                    android:layout_width="match_parent"-->
+    <!--                    android:layout_height="wrap_content"-->
+    <!--                    android:orientation="vertical">-->
+
+    <!--                    &lt;!&ndash;                    <androidx.recyclerview.widget.RecyclerView&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:id="@+id/book_list"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_width="match_parent"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_height="250dp"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_marginTop="12dp"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />&ndash;&gt;-->
+
+    <!--                    &lt;!&ndash;                    <TextView&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:id="@+id/tv_total_count"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_width="wrap_content"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_height="wrap_content"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_marginStart="16dp"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_marginTop="12dp"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:textColor="@color/black"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:textSize="16sp" />&ndash;&gt;-->
+
+        <TextView
+            android:id="@+id/tv_book_statue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/black"
+            android:visibility="visible"
+            android:textSize="16sp"
+            app:layout_constraintTop_toBottomOf="@id/book_list"
+            app:layout_constraintStart_toStartOf="@+id/book_list"/>
+
+        <!--                </LinearLayout>-->
+
+
+    <!--                <LinearLayout-->
+    <!--                    android:layout_width="match_parent"-->
+    <!--                    android:layout_height="wrap_content"-->
+    <!--                    android:layout_marginStart="16dp"-->
+    <!--                    android:layout_marginTop="16dp"-->
+    <!--                    android:layout_marginBottom="24dp"-->
+    <!--                    android:orientation="vertical">-->
+
+
+    <!--                    <com.google.android.material.button.MaterialButton-->
+    <!--                        android:id="@+id/btn_confirm"-->
+    <!--                        android:layout_width="wrap_content"-->
+    <!--                        android:layout_height="wrap_content"-->
+    <!--                        android:backgroundTint="@color/black"-->
+    <!--                        android:text="Confirm"-->
+    <!--                        android:textAllCaps="false"-->
+    <!--                        android:textColor="@color/white"-->
+    <!--                        android:textStyle="bold"-->
+    <!--                        android:visibility="gone" />-->
+
+    <!--                    &lt;!&ndash;                    <com.google.android.material.button.MaterialButton&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:id="@+id/btn_print"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_width="wrap_content"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_height="wrap_content"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_gravity="end"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:layout_marginStart="24dp"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:backgroundTint="@color/black"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:text="Print"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:textAllCaps="false"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:textColor="@color/white"&ndash;&gt;-->
+    <!--                    &lt;!&ndash;                        android:textStyle="bold" />&ndash;&gt;-->
+
+
+    <!--                </LinearLayout>-->
+
+
+    <!--            </LinearLayout>-->
+
+
+    <!--        </com.google.android.material.card.MaterialCardView>-->
+
+    <!--    </LinearLayout>-->
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:backgroundTint="@color/default_color"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
