@@ -8,7 +8,7 @@ import androidx.room.RoomDatabase
 
 
 
-@Database(entities = [Rfid::class,BookDetailsModel::class], version = 2, exportSchema = false)
+@Database(entities = [Rfid::class,BookDetailsModel::class], version = 3, exportSchema = false)
 
 abstract class RfidDatabase : RoomDatabase() {
 

@@ -1,12 +1,14 @@
 package com.example.lms.BookDetails
 
+
+import android.Manifest
+import android.animation.*
 import android.annotation.SuppressLint
-import android.app.AlertDialog
-import android.app.Dialog
-import android.app.PendingIntent
-import android.app.ProgressDialog
+import android.app.*
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.hardware.usb.UsbDevice
@@ -14,9 +16,10 @@ import android.hardware.usb.UsbManager
 import android.os.*
 import android.util.Log
 import android.view.*
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.Toast
+import android.view.animation.Animation
+import android.view.animation.LinearInterpolator
+import android.view.animation.TranslateAnimation
+import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.os.postDelayed
@@ -39,26 +42,65 @@ import com.example.lms.BookDetails.room_view_model.RoomDbViewModel
 import com.example.lms.R
 import com.example.lms.ServerClass
 import com.example.lms.data.Rfid
+import com.example.lms.data.RfidDatabase
 import com.example.lms.databinding.ActivityBookDetailsBinding
 import com.example.lms.getrfid.PassData
+import com.example.lms.helpers.*
+import com.example.lms.tcp_clinet.TcpClientCallback
+import com.example.lms.tcp_clinet.TcpClientService
 import com.example.lms.utils.*
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.*
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.renderer.XAxisRendererHorizontalBarChart
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
+import com.rheyansh.helpers.RPermissionHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.Main
-import java.io.IOException
+import java.io.*
 import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 import kotlin.experimental.and
 
 
 @AndroidEntryPoint
-class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, CSNIOCallBack {
+class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, CSNIOCallBack, TcpClientCallback {
+
+
+    private lateinit var tcpClientService: TcpClientService
+    private var isServiceBound = false
+    var RFIDNO = ""
+
+    private val uiHandler = Handler(Looper.getMainLooper())
+
+    private lateinit var rfidDatabase: RfidDatabase
+    private var isGenerating = false
+    val pdfModel = RPdfGeneratorModel(listOf(), "Your Header")
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as TcpClientService.LocalBinder
+            tcpClientService = binder.getService()
+            tcpClientService.setCallback(this@ConnectUSBActivity)
+            isServiceBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            isServiceBound = false
+        }
+    }
+
         private var linearlayoutdevices: LinearLayout? = null
     lateinit var binding: ActivityBookDetailsBinding
     //var btnDisconnect: Button? = null
@@ -119,21 +161,100 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
     var roomRfidList:MutableList<Any> = mutableListOf()
 
+    private lateinit var animatorSet: AnimatorSet
+  //  private lateinit var dummyInfo: RPdfGeneratorModel
 
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityBookDetailsBinding.inflate(layoutInflater)
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         setContentView(binding.root)
+        //dummyInfo = dummyModel()
+
+
+        lifecycleScope.launch {
+            val rowCount = rfidDatabase.rfidDao().getCountOfBooks()
+            binding.coloredView.setTotalRange(50)
+            binding.coloredView.setDataListSize(rowCount)
+
+        }
+
+        tcpClientService = TcpClientService()
+        createPdf(false)
+
+
+
+
+
+        // Bind to the service
+        val intent = Intent(this, TcpClientService::class.java)
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        startService(intent)  // Ensure that the service is started
+
+        val isMyServiceRunning = isServiceRunning(this, TcpClientService::class.java)
+        if (isMyServiceRunning) {
+            // The service is running
+            Log.d("Runnign","yes")
+
+        } else {
+            Log.d("Runnign","No")
+        }
         getRfidFromStrArray = String()
         serverClass = ServerClass(this,this)
         progressDialog = ProgressDialog(this)
 
         hideSystemUI()
+
+
+
+
+
+
+        binding.coloredView.setTotalRange(50)
+        binding.coloredView.setDataListSize(20)
+
+//        val handler = Handler()
+//        val delay = 5000 // 5 seconds in milliseconds
+//        var iteration = 1
+//
+//        handler.postDelayed(object : Runnable {
+//            override fun run() {
+//                // Update data list size based on the iteration
+//                when (iteration) {
+//                    1 -> {
+//                        binding.coloredView.setDataListSize(20)
+//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 20",Toast.LENGTH_SHORT).show()
+//                    }
+//                    2 -> {
+//                        binding.coloredView.setDataListSize(35)
+//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 35",Toast.LENGTH_SHORT).show()
+//                    }
+//                    3 -> {
+//                        binding.coloredView.setDataListSize(40)
+//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 40",Toast.LENGTH_SHORT).show()
+//                    }
+//                    4 -> {
+//                        binding.coloredView.setDataListSize(46)
+//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 46",Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//
+//                // Increment the iteration or reset if it reaches 4
+//                iteration = if (iteration < 4) iteration + 1 else 1
+//
+//                // Call the same method after the delay
+//                handler.postDelayed(this, delay.toLong())
+//            }
+//        }, delay.toLong())
+
+
+
+        val animator = ObjectAnimator.ofInt(binding.coloredView, "progress", 0, 100)
+        animator.duration = 5000 // 5000 milliseconds = 5 seconds
+        animator.start()
 
 
         cache = mutableSetOf()
@@ -149,7 +270,15 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
         socket = Socket()
 
-
+//        val progressBar = findViewById<ProgressBar>(R.id.hori_progressBar)
+//        progressBar.max = 50
+//        var listSise =  progressBar.progress
+//          listSise = 2
+//
+//        // Example: Animate progress from 0 to 100 over 5 seconds
+//        val animator = ObjectAnimator.ofInt(progressBar, "progress", listSise, listSise)
+//        animator.duration = 5000 // 5000 milliseconds = 5 seconds
+//        animator.start()
 
 
         bookDetailsList = arrayListOf()
@@ -211,6 +340,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
             list.clear()
             //rfidTemp.clear()
             binding.tvTotalCount.text=""
+            binding.tvBookStatue.text = ""
             bookDetailsList.clear()
 
             bookDetailsAdapter.notifyDataSetChanged()
@@ -255,7 +385,20 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
 
 
+    fun generateColors(count: Int): List<String> {
+        val colors = mutableListOf<String>()
 
+        for (i in 0 until count) {
+            when {
+                i < 20 -> colors.add("3bcd8b")
+                i in 20 until 30 -> colors.add("#FFFF00")
+                i in 30 until 40 -> colors.add("FFA500")
+                else -> colors.add("FF0000")
+            }
+        }
+
+        return colors
+    }
 
     private fun bindObserverToGetResponse(){
         bookDetailsViewModel.getBookDetailsResponseLiveData.observe(this) {
@@ -269,14 +412,32 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                     rfidTemp.add(binding.tvRfid.text.toString())
 
                     try {
+                        val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
                         if(it.data?.body()?.title?.isNotEmpty() == true && it.data.body()?.accessNo?.isNotEmpty() == true){
+                            writeToFileExternal("returnBooksLog.txt",binding.tvRfid.text.toString(),it.data?.body()?.title.toString(),it.data?.body()?.accessNo.toString())
                             binding.tvTotalCount.isVisible = true
                             if (!bookDetailsList.contains(BookDetailsModel(it.data.body()?.accessNo.toString(), it.data?.body()?.title.toString()))) {
                             bookDetailsList.add(BookDetailsModel(it.data.body()?.accessNo.toString(), it.data.body()?.title.toString()))
                             bookTitle.add(it.data.body()?.title.toString())
                             bookTitle.add(it.data.body()?.accessNo.toString())
-                                roomDbViewModel.addBookDetails(com.example.lms.data.BookDetailsModel(0,it.data.body()?.title.toString(),it.data.body()?.accessNo.toString()))
+                                roomDbViewModel.addBookDetails(com.example.lms.data.BookDetailsModel(0,it.data.body()?.title.toString(),it.data.body()?.accessNo.toString(),currentDate,RFIDNO))
+
+                                lifecycleScope.launch {
+                                    val rowCount = rfidDatabase.rfidDao().getCountOfBooks()
+                                    binding.coloredView.setTotalRange(50)
+                                    binding.coloredView.setDataListSize(rowCount)
+
+                                }
+
+                                val newTransaction = RTransaction()
+                                newTransaction.Date = currentDate
+                                newTransaction.AccessNo = it.data.body()?.accessNo.toString()
+                                newTransaction.BookName = it.data.body()?.title.toString()
+                                newTransaction.RFIDNI = RFIDNO
+                                pdfModel.list.add(newTransaction)
                         } }
+
+
 
 
                         val list = bookDetailsList.distinct()
@@ -337,6 +498,8 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
             R.id.btn_print -> {
                 btnPrint!!.isEnabled = false
                 es.submit(TaskPrint(mPos))
+
+                createPdf(true)
             }
             else -> {}
         }
@@ -745,32 +908,25 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
         } else if (!rfidTemp.contains(item)) {
             binding.tvRfid.text = item
             binding.searchView.text = item
-            //rfidFromClient = rfidFromClient
-            // getting RFid From Local Database
-//            roomDbViewModel.getAllRfid(item)
-//            bindObserverToGetDetails()
-            CoroutineScope(Main).launch {
-                val rfid = roomDbViewModel.findRfid(item)
 
+            CoroutineScope(Dispatchers.Default).launch {
+                val rfid = roomDbViewModel.findRfid(item)
                 try {
-                    Log.d("RfidFromDb",rfid.toString())
                      if (rfid.rfidTagNo==item) {
                          if (rfidTemp.size==rfidTemp.size) {
-
-//                             Handler(Looper.getMainLooper()).postDelayed(10000) {
-//                                 timer = 5000
-//                                 countDownTimer()
-//                             }
                          }
-//                         bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
-//                         bindObserverToGetResponse()
+
                         } else {
+                         bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
+                         bindObserverToGetResponse()
+
                         }
-                    Log.d("RfidFromRoomDb", rfid.rfidTagNo)
+
                 } catch (e:Exception){
                     Log.d("Exception",e.message.toString())
                     bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
                     bindObserverToGetResponse()
+                    Log.d("rfrmlvfm",item)
                 }
             }
         }
@@ -1187,6 +1343,252 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 //            }
 //
 //        }.start()
+    }
+
+    fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
+
+//    override fun onDestroy() {
+//        super.onDestroy()
+//
+//        if (isServiceBound) {
+//            tcpClientService.closeConnection() // Close the connection
+//            unbindService(serviceConnection)
+//            isServiceBound = false
+//        }
+//    }
+
+    override fun onPause() {
+        super.onPause()
+        tcpClientService.closeConnection()
+        tcpClientService.disconnectFromServer()
+        if (isServiceBound) {
+           // tcpClientService.closeConnection() // Close the connection
+            unbindService(serviceConnection)
+            isServiceBound = false
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        tcpClientService.closeConnection() // Close the connection
+        tcpClientService.disconnectFromServer()
+    }
+
+
+
+
+//    override fun onResume() {
+//        super.onResume()
+//        tcpClientService.reconnect()
+//    }
+
+    // TcpClientCallback methods
+    override fun onConnected(isConnected: Boolean) {
+        // Handle connection established
+
+        runOnUiThread {
+                if (isConnected==true){
+                    binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
+                    Log.d("tcpConnectionFromService", isConnected.toString())
+                }
+                else if (!isConnected) {
+                    binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+                    Log.d("tcpConnectionFromService", isConnected.toString())
+                }
+            }
+    }
+
+    override fun onDisconnected(isConnected:Boolean) {
+        // Handle disconnection
+        runOnUiThread {
+            binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+            Log.d("tcpConnectionFromService1", isConnected.toString())
+        }
+    }
+
+
+
+
+
+
+
+    override fun onDataReceived(data: String) {
+        // Handle received data
+
+       // runOnUiThread {
+           // binding.txtString.text = data
+
+            if(data.length<24){
+
+            } else if (!rfidTemp.contains(data)) {
+                binding.tvRfid.text = data
+                binding.searchView.text = data
+                RFIDNO = data
+
+                CoroutineScope(Dispatchers.Default).launch {
+                    val rfid = roomDbViewModel.findRfid(data)
+                    try {
+                        if (rfid.rfidTagNo==data) {
+                            if (rfidTemp.size==rfidTemp.size) {
+                                Snackbar.make(binding.root,"Book Already Return",Snackbar.LENGTH_SHORT).show()
+                            }
+
+                        } else if(rfid.rfidTagNo!=data || rfid.rfidTagNo.isNullOrEmpty()) {
+                            runOnUiThread {
+                                bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
+                                bindObserverToGetResponse()
+                            }
+
+                        }
+
+                    } catch (e:Exception){
+                        Log.d("Exception",e.message.toString())
+                        runOnUiThread {
+                            bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
+                            bindObserverToGetResponse()
+                        }
+                       // Log.d("rfrmlvfm",item)
+                    }
+                }
+            }
+
+
+            ///Toast.makeText(this,data,Toast.LENGTH_SHORT).show()
+       // }
+    }
+
+
+    fun writeToFileExternal(fileName: String, rfid: String,bookName:String, accessCode: String) {
+        try {
+            val externalDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val file = File(externalDir, fileName)
+
+            // Use BufferedWriter for better performance
+            val bufferedWriter = BufferedWriter(FileWriter(file, true))
+
+            // No need to check file length for duplicates
+
+            // Write the data
+            bufferedWriter.write(rfid)
+            bufferedWriter.write(" ")
+            bufferedWriter.write(bookName)
+            bufferedWriter.write(" ")
+            bufferedWriter.write(accessCode)
+            bufferedWriter.newLine() // Use newLine() for appending a newline
+            bufferedWriter.flush() // Flush to ensure the data is written immediately
+
+            // Close the writer
+            bufferedWriter.close()
+        } catch (e: Exception) {
+            Log.d("exception", e.toString())
+            e.printStackTrace()
+        }
+    }
+
+
+
+    private fun startColorAnimation(textView: TextView) {
+        val colorFrom = textView.currentTextColor
+        val colorTo = 0xFF00FF00.toInt() // Green color
+
+        val colorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), colorFrom, colorTo)
+        colorAnimation.duration = 1000 // 1 second
+
+        colorAnimation.addUpdateListener { animator ->
+            val color = animator.animatedValue as Int
+            textView.setTextColor(color)
+        }
+
+        colorAnimation.start()
+    }
+
+
+
+
+    fun createPdf(download: Boolean) {
+
+        val permissionHelper = RPermissionHelper(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), 100)
+        permissionHelper.denied {
+            if (it) {
+                Log.d("Permission check", "Permission denied by system")
+                permissionHelper.openAppDetailsActivity()
+            } else {
+                Log.d("Permission check", "Permission denied")
+            }
+        }
+
+//Request all permission
+        permissionHelper.requestAll {
+            Log.d("Permission check", "All permission granted")
+
+            if (!isGenerating && download) {
+                isGenerating = true
+
+
+//                val pdfModeltwo = RPdfGeneratorModeltwo(listOf(), "Your Header")
+//
+//
+//                val randomDataList = generateRandomData()
+//
+//                for ((index, data) in randomDataList.withIndex()) {
+//                    println("Data #$index: $data")
+//                    pdfModeltwo.list.add(data)
+//                }
+
+                RPdfGenerator.generatePdf(this, pdfModel)
+
+                //RPdfGenerator.generatePdf(this, dummyInfo)
+
+                val handler = Handler()
+                val runnable = Runnable {
+                    //to avoid multiple generation at the same time. Set isGenerating = false on some delay
+                    isGenerating = false
+                }
+                handler.postDelayed(runnable, 2000)
+            }
+        }
+
+//Request individual permission
+        permissionHelper.requestIndividual {
+            Log.d("Permission check", "Individual Permission Granted")
+        }
+    }
+
+
+
+
+
+    fun generateRandomData(): List<DateClass> {
+        val randomDataList = mutableListOf<DateClass>()
+
+        for (i in 1..30) {
+            val randomData = DateClass(
+                Date = generateRandomString(),
+                AccessNo = generateRandomString(),
+                BookName = generateRandomString(),
+                RFIDNI = generateRandomString()
+            )
+
+            randomDataList.add(randomData)
+        }
+
+        return randomDataList
+    }
+
+    fun generateRandomString(length: Int = 5): String {
+        val allowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        return (1..length)
+            .map { allowedChars.random() }
+            .joinToString("")
     }
 
 }

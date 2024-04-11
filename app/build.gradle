@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace 'com.example.lms'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.example.lms"
         minSdk 21
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -96,4 +96,40 @@ dependencies {
 
     //Progressbar
     implementation 'com.github.ybq:Android-SpinKit:1.4.0'
+
+    implementation 'com.itextpdf:itextg:5.5.10'
+
+
+    def work_version = "2.3.1"
+
+    // (Java only)
+    implementation "androidx.work:work-runtime:$work_version"
+
+    // Kotlin + coroutines
+    implementation "androidx.work:work-runtime-ktx:$work_version"
+
+    // optional - RxJava2 support
+    implementation "androidx.work:work-rxjava2:$work_version"
+
+    // optional - GCMNetworkManager support
+    implementation "androidx.work:work-gcm:$work_version"
+
+    // optional - Test helpers
+    androidTestImplementation "androidx.work:work-testing:$work_version"
+
+    implementation 'com.itextpdf:itext7-core:7.1.16'
+    implementation 'com.itextpdf:io:7.0.2'
+    implementation 'com.itextpdf:kernel:7.0.2'
+    implementation 'com.itextpdf:layout:7.0.2'
+    implementation 'com.karumi:dexter:6.2.3'
+
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+
+
+
+
+
+
+
+
 }

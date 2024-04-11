@@ -7,4 +7,4 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "book_details_table")
 data class BookDetailsModel( @PrimaryKey(autoGenerate = true)
-                             val id: Int,val Title:String,val AccessNo:String)
+                             val id: Int,val Title:String,val AccessNo:String,val date:String,val RfifdNo:String)

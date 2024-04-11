@@ -17,6 +17,9 @@ interface RfidDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addBookDetails(bookDetailsModel: BookDetailsModel)
 
+    @Query("SELECT COUNT(*) FROM book_details_table")
+    suspend fun getCountOfBooks(): Int
+
     @Query("SELECT * FROM rfid_table ORDER BY id ASC")
       fun readAllRfid(): LiveData<List<Rfid>>
 

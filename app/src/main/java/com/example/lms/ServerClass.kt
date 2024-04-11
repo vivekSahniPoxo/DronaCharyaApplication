@@ -103,6 +103,7 @@ class ServerClass(val passData: PassData,val tcpConnection:PassData) : Service()
                                     Log.d("rifdByteArray",bytesToHex(byte.to2ByteArray()))
 
                                      val temp = bytesToHex(buffer).toUpperCase()
+                                    Log.d("tkemrkgvmbr",temp)
                                     var str1 = temp
                                     //val strArray =  ArrayList<GetRfidTagNoFromClientModel>()
                                     val strArray =  ArrayList<GetRfidTagNoFromClientModel>()
@@ -129,7 +130,7 @@ class ServerClass(val passData: PassData,val tcpConnection:PassData) : Service()
                                     passData.passRfidTag(i.RFIDNo)
                                     //passData.passRfidTag(bytesToHex(buffer).toUpperCase())
 
-                                    Log.i("Server class", (bytesToHex(buffer).toUpperCase()))
+                                    Log.d("Server class", (bytesToHex(buffer).toUpperCase()))
 //                                    try{
 //                                        if (socket?.isConnected!!){
 //                                            Log.d("TrueSocket", socket?.isConnected.toString())

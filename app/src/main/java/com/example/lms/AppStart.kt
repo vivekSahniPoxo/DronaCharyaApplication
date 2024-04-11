@@ -1,11 +1,16 @@
 package com.example.lms
 
+import android.Manifest
+import android.Manifest.permission.RECEIVE_BOOT_COMPLETED
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.hardware.usb.UsbDevice
@@ -13,12 +18,16 @@ import android.hardware.usb.UsbManager
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -29,10 +38,15 @@ import com.csnprintersdk.csnio.csnbase.CSNIOCallBack
 import com.example.lms.BookDetails.ConnectUSBActivity
 import com.example.lms.BookDetails.room_view_model.RoomDbViewModel
 import com.example.lms.getrfid.PassData
+import com.example.lms.helpers.RPdfGenerator
+import com.example.lms.helpers.RPdfGeneratorModel
+import com.example.lms.helpers.RTransaction
 import com.example.lms.utils.Cons
+//import com.example.lms.utils.PdfGenerator
 import com.example.lms.utils.TaskOpen
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import com.rheyansh.helpers.RPermissionHelper
 import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.*
@@ -64,6 +78,8 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
     lateinit var dialog:Dialog
     var mActivity: AppStart? = null
     var es: ExecutorService = Executors.newScheduledThreadPool(30)
+    //lateinit var pdfGenerator: PdfGenerator
+    val totalBookReturnList = arrayListOf<String>()
 
 //    lateinit var socket: Socket
     lateinit var next:Button
@@ -71,10 +87,24 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
 
     private var pressedTime: Long = 0
 
+    private var doubleBackToExitPressedOnce = false
 
-     override fun onCreate(savedInstanceState: Bundle?) {
+    private val PERMISSION_REQUEST_CODE = 123
+    private var isGenerating = false
+    val pdfModel = RPdfGeneratorModel(listOf(), "Your Header")
+
+
+
+    override fun onCreate(savedInstanceState: Bundle?) {
          super.onCreate(savedInstanceState)
          setContentView(R.layout.start_private)
+         //pdfGenerator = PdfGenerator(this)
+        createPdf(false)
+
+
+
+
+         checkAndRequestBootPermission()
 
          next = findViewById(R.id.btn_next)
 
@@ -145,11 +175,10 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
             }
 //                    if (it[0].rfidTagNo!=binding.tvRfid.text){
 
-
-
-
         })
-        radio58 = findViewById<View>(R.id.radioButtonTicket58) as RadioButton
+
+
+         radio58 = findViewById<View>(R.id.radioButtonTicket58) as RadioButton
         radio80 = findViewById<View>(R.id.radioButtonTicket80) as RadioButton
         radioPrintCount1 = findViewById<View>(R.id.radioButtonPrintCount1) as RadioButton
         radioPrintCount10 = findViewById<View>(R.id.radioButtonPrintCount10) as RadioButton
@@ -247,7 +276,10 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
             if (etRestId.text?.isNotEmpty() == true) {
                 if (etRestId.text.toString()=="@#Hisar23") {
                     dialog.dismiss()
+
+
                     deleteAllRfid()
+
                 } else{
                     etRestId.error = "ResetId is wrong"
                 }
@@ -286,9 +318,10 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
         val builder = AlertDialog.Builder(this)
         builder.setPositiveButton("Yes") { _, _ ->
             es.submit(TaskPrint(mPos))
-            roomDbViewModel.deleteAllRfid()
-            roomDbViewModel.deleteAllBookDetails()
-            Toast.makeText(this, "Successfully removed everything", Toast.LENGTH_SHORT).show()
+             createPdf(true)
+//            roomDbViewModel.deleteAllRfid()
+//            roomDbViewModel.deleteAllBookDetails()
+           // Toast.makeText(this, "Successfully removed everything", Toast.LENGTH_SHORT).show()
 
         }
         builder.setNegativeButton("No") { _, _ -> }
@@ -323,15 +356,31 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
           pos!!.GetIO().IsOpened()
             mActivity!!.runOnUiThread {
                 if (bPrintResult != null) {
-                    Toast.makeText(applicationContext, if (bPrintResult >= 0) resources.getString(R.string.printsuccess) + " " + ResultCodeToString(bPrintResult)
-                    else
-                        resources.getString(R.string.printfailed) + " " + ResultCodeToString(bPrintResult), Toast.LENGTH_SHORT).show()
+                    val toastMessage = if (bPrintResult >= 0) {
+                        roomDbViewModel.deleteAllRfid()
+                        roomDbViewModel.deleteAllBookDetails()
+                        //deleteAllRfid()
+                        resources.getString(R.string.printsuccess) + " " + ResultCodeToString(bPrintResult)
+                    } else {
+                        resources.getString(R.string.printfailed) + " " + ResultCodeToString(bPrintResult)
+                    }
 
-//                    roomDbViewModel.deleteAllRfid()
-//                    roomDbViewModel.deleteAllBookDetails()
+                    Toast.makeText(applicationContext, toastMessage, Toast.LENGTH_SHORT).show()
 
-
+                    // mActivity!!.btnPrint!!.isEnabled = bIsOpened
                 }
+
+
+//                if (bPrintResult != null) {
+//                    Toast.makeText(applicationContext, if (bPrintResult >= 0) resources.getString(R.string.printsuccess) + " " + ResultCodeToString(bPrintResult)
+//                    else
+//                        resources.getString(R.string.printfailed) + " " + ResultCodeToString(bPrintResult), Toast.LENGTH_SHORT).show()
+//
+////                    roomDbViewModel.deleteAllRfid()
+////                    roomDbViewModel.deleteAllBookDetails()
+//
+//
+//                }
                // mActivity!!.btnPrint!!.isEnabled = bIsOpened
             }
         }
@@ -412,6 +461,9 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
                                     it.forEach {
                                     pos.POS_TextOut("   ${it.Title}\r\n", 3, 0, 0, 0, 0, 0)
                                         pos.POS_TextOut("   ${it.AccessNo}\r\n", 3, 0, 0, 0, 0, 0)
+                                        totalBookReturnList.add(it.Title)
+                                        totalBookReturnList.add(it.AccessNo)
+                                       // pdfGenerator.generatePdf(this,"Total Return Books",totalBookReturnList,)
                                     }
                                     pos.POS_TextOut("   Total Rfid No: ${it.size}\r\n", 3, 0, 0, 0, 0, 0)
                                 pos.POS_TextOut("             By Poxo Rfid Automation", 0, 20, 0, 0, 0, 0)
@@ -524,15 +576,22 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
          }
      }
 
-    override fun onBackPressed() {
-        if (pressedTime + 2000 > System.currentTimeMillis()) {
-            super.onBackPressed()
 
-        } else {
-            Toast.makeText(baseContext, "Press back again to exit", Toast.LENGTH_SHORT).show()
-        }
-        pressedTime = System.currentTimeMillis()
-    }
+
+//    override fun onBackPressed() {
+//        if (doubleBackToExitPressedOnce) {
+//            // If the flag is set, close the app
+//            finish()
+//            return
+//        }
+//
+//        this.doubleBackToExitPressedOnce = true
+//        Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
+//
+//        Handler(Looper.getMainLooper()).postDelayed({
+//            doubleBackToExitPressedOnce = false
+//        }, 2000)
+//    }
 
 
 
@@ -561,6 +620,98 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
             systemUiVisibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_FULLSCREEN
         }
     }
+
+
+
+    private fun checkAndRequestBootPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val permission = android.Manifest.permission.RECEIVE_BOOT_COMPLETED
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(permission), PERMISSION_REQUEST_CODE)
+            }
+        }
+    }
+
+    // Override onRequestPermissionsResult to handle the permission result
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, you can proceed with your logic
+                } else {
+                    // Permission denied, handle accordingly (e.g., inform the user)
+                }
+            }
+            else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        }
+    }
+
+
+
+    fun createPdf(download: Boolean) {
+
+        val permissionHelper = RPermissionHelper(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), 100)
+        permissionHelper.denied {
+            if (it) {
+                Log.d("Permission check", "Permission denied by system")
+                permissionHelper.openAppDetailsActivity()
+            } else {
+                Log.d("Permission check", "Permission denied")
+            }
+        }
+
+//Request all permission
+        permissionHelper.requestAll {
+            Log.d("Permission check", "All permission granted")
+
+            if (!isGenerating && download) {
+                isGenerating = true
+
+
+//                val pdfModeltwo = RPdfGeneratorModeltwo(listOf(), "Your Header")
+//
+//
+//                val randomDataList = generateRandomData()
+//
+//                for ((index, data) in randomDataList.withIndex()) {
+//                    println("Data #$index: $data")
+//                    pdfModeltwo.list.add(data)
+//                }
+
+                roomDbViewModel.readAllBookDetails.observe(this , Observer {
+                    it.forEach {
+                        val newTransaction = RTransaction()
+                        newTransaction.Date = it.date
+                        newTransaction.AccessNo = it.AccessNo
+                        newTransaction.BookName = it.Title.toString()
+                        newTransaction.RFIDNI = it.RfifdNo
+                        pdfModel.list.add(newTransaction)
+
+                    }
+                })
+                RPdfGenerator.generatePdf(this, pdfModel)
+
+                //RPdfGenerator.generatePdf(this, dummyInfo)
+
+                val handler = Handler()
+                val runnable = kotlinx.coroutines.Runnable {
+                    //to avoid multiple generation at the same time. Set isGenerating = false on some delay
+                    isGenerating = false
+                }
+                handler.postDelayed(runnable, 2000)
+            }
+        }
+
+//Request individual permission
+        permissionHelper.requestIndividual {
+            Log.d("Permission check", "Individual Permission Granted")
+        }
+    }
+
+
+
+
+
 
 
 

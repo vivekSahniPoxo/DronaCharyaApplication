@@ -24,6 +24,10 @@ class RfidRepository(private val rfidDao: RfidDao) {
         rfidDao.addBookDetails(bookDetailsModel)
     }
 
+    suspend fun getCountOfInsertedData(): Int {
+        return rfidDao.getCountOfBooks()
+    }
+
     suspend fun deleteAllRfid(){
         rfidDao.deleteAllRfid()
     }

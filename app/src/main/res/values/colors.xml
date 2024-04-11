@@ -10,5 +10,7 @@
     <color name="default_color">#4472c4</color>
     <color name="red">#FF0000</color>
     <color name="green">#3bcd8b</color>
+    <color name="orange">#FFA500</color>
+    <color name="yellow">#FFFF00</color>
 
 </resources>

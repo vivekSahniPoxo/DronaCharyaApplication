@@ -57,6 +57,16 @@ class RoomDbViewModel(application: Application): AndroidViewModel(application) {
     }
 
 
+    private val _countLiveData = MutableLiveData<Int>()
+    val countLiveData: LiveData<Int> = _countLiveData
+    fun getCountOfInsertedData() {
+        viewModelScope.launch {
+            val count = repository.getCountOfInsertedData()
+            _countLiveData.postValue(count)
+        }
+    }
+
+
     fun deleteAllRfid(){
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteAllRfid()

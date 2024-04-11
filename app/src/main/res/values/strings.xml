@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">LMS</string>
     <string name="print">Print</string>
-<!--    <string name="printsuccess">Print receipt Success</string>-->
+    <!--    <string name="printsuccess">Print receipt Success</string>-->
     <string name="printsuccess">Receive your receipt</string>
     <string name="printfailed">Print Failed</string>
     <string name="testprinterbt2">Test Printer BT 2.0</string>

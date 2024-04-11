@@ -4,11 +4,12 @@ class Cons {
     companion object{
         //const val BASE_URL=  "http://192.168.0.101:4568/api/"
 
+      //  const val BASE_URL = "http://192.168.0.101:4568/api/"
        //const val BASE_URL = "https://library.poxorfid.com/api/BooksInfo/"
 
-        //const val BASE_URL= "http://164.52.223.163:4558/api/"
-
-        const val BASE_URL= "http://192.168.0.113:83/api/"
+        const val BASE_URL= "http://164.52.223.163:4558/api/"
+        //const val BASE_URL=   "http://164.52.223.163:4558/api/"
+        //const val BASE_URL= "http://192.168.0.113:83/api/"
         const val loaderMessage = "Please Wait...."
         const val nPrintWidth = 384
         const val bCutter = true
