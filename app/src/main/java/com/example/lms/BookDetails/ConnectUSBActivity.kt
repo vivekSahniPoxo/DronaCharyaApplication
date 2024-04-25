@@ -5,10 +5,7 @@ import android.Manifest
 import android.animation.*
 import android.annotation.SuppressLint
 import android.app.*
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
+import android.content.*
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.hardware.usb.UsbDevice
@@ -48,6 +45,8 @@ import com.example.lms.getrfid.PassData
 import com.example.lms.helpers.*
 import com.example.lms.tcp_clinet.TcpClientCallback
 import com.example.lms.tcp_clinet.TcpClientService
+
+
 import com.example.lms.utils.*
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.charts.LineChart
@@ -75,39 +74,53 @@ import kotlin.experimental.and
 
 
 @AndroidEntryPoint
-class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, CSNIOCallBack, TcpClientCallback {
-
-
-    private lateinit var tcpClientService: TcpClientService
+class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, CSNIOCallBack, TcpClientCallback{
+    private val reconnectHandler = Handler(Looper.getMainLooper())
+    private  var tcpClientService: TcpClientService?=null
     private var isServiceBound = false
     var RFIDNO = ""
+    var isActivityOnStop = false
+    private var isConnectedPreviously = false
+   var tempRif = arrayListOf<String>()
 
-    private val uiHandler = Handler(Looper.getMainLooper())
-
+    var showPop = false
     private lateinit var rfidDatabase: RfidDatabase
     private var isGenerating = false
     val pdfModel = RPdfGeneratorModel(listOf(), "Your Header")
-
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as TcpClientService.LocalBinder
-            tcpClientService = binder.getService()
-            tcpClientService.setCallback(this@ConnectUSBActivity)
-            isServiceBound = true
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            isServiceBound = false
-        }
-    }
+    private var connectionEstablished = false
+//    private val serviceConnection = object : ServiceConnection {
+//        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+//            val binder = service as TcpClientService.LocalBinder
+//            tcpClientService = binder.getService()
+//            tcpClientService?.setCallback(this@ConnectUSBActivity)
+//            isServiceBound = true
+//
+//            val isConnected = tcpClientService?.isConnected() ?: false
+//            if (!isConnected){
+//                Log.d("isConnected",isConnected.toString())
+//                tcpClientService?.reconnect()
+//            }
+//            Log.d("TcpClientService", "Connected to TCP server: $isConnected")
+//
+//
+//       }
+//
+//        override fun onServiceDisconnected(name: ComponentName?) {
+//            tcpClientService = null
+//            isServiceBound = false
+//
+//            Log.d("TcpClientService", "Disconnected from TCP server")
+//        }
+//    }
 
         private var linearlayoutdevices: LinearLayout? = null
     lateinit var binding: ActivityBookDetailsBinding
     //var btnDisconnect: Button? = null
     var btnPrint: Button? = null
     var mActivity: ConnectUSBActivity? = null
-    lateinit var serverClass: ServerClass
+   // lateinit var serverClass: ServerClass
     private val bookDetailsViewModel:BookDetailsViewModel by viewModels()
+
 
    // private lateinit var bookDetailsViewModel:BookDetailsViewModel
     var es: ExecutorService = Executors.newScheduledThreadPool(30)
@@ -174,37 +187,87 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
         setContentView(binding.root)
         //dummyInfo = dummyModel()
 
-
+        rfidDatabase = RfidDatabase.getDatabase(this)
         lifecycleScope.launch {
             val rowCount = rfidDatabase.rfidDao().getCountOfBooks()
             binding.coloredView.setTotalRange(50)
             binding.coloredView.setDataListSize(rowCount)
 
+            binding.tvTotalBookIn.text = "Total Book In Bin:$rowCount"
+
+
         }
 
         tcpClientService = TcpClientService()
-        createPdf(false)
 
 
+
+
+
+
+
+
+        if (!isServiceBound) {
+            val serviceIntent = Intent(this, TcpClientService::class.java)
+            bindService(serviceIntent, object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                    val binder = service as TcpClientService.LocalBinder
+                    tcpClientService = binder.getService()
+                    tcpClientService?.setCallback(this@ConnectUSBActivity)
+
+                    // Update the flag to indicate that the service is bound
+                    isServiceBound = true
+
+
+//                    runOnUiThread {
+//
+//                        binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
+//                    }
+                }
+
+                override fun onServiceDisconnected(name: ComponentName?) {
+                    // Handle disconnection if needed
+
+                    // Reset the flag when the service is disconnected
+                    isServiceBound = false
+//                    runOnUiThread {
+//                        binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+//                    }
+                }
+            }, Context.BIND_AUTO_CREATE)
+        }
+        Handler().postDelayed({
+            runOnUiThread {
+                connectivityBackGroundChange()
+            }
+        }, 3000)
 
 
 
         // Bind to the service
-        val intent = Intent(this, TcpClientService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        startService(intent)  // Ensure that the service is started
+//        val intent = Intent(this, TcpClientService::class.java)
+//        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+//        startService(intent)  // Ensure that the service is started
 
         val isMyServiceRunning = isServiceRunning(this, TcpClientService::class.java)
         if (isMyServiceRunning) {
             // The service is running
+
             Log.d("Runnign","yes")
 
         } else {
             Log.d("Runnign","No")
         }
         getRfidFromStrArray = String()
-        serverClass = ServerClass(this,this)
+//        serverClass = ServerClass(this,this)
         progressDialog = ProgressDialog(this)
+//        progressDialog.setTitle("Please wait...")
+//        progressDialog?.setMessage("Server is connecting")
+//        progressDialog?.setCancelable(false)
+
+
+
+
 
         hideSystemUI()
 
@@ -216,39 +279,9 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
         binding.coloredView.setTotalRange(50)
         binding.coloredView.setDataListSize(20)
 
-//        val handler = Handler()
-//        val delay = 5000 // 5 seconds in milliseconds
-//        var iteration = 1
-//
-//        handler.postDelayed(object : Runnable {
-//            override fun run() {
-//                // Update data list size based on the iteration
-//                when (iteration) {
-//                    1 -> {
-//                        binding.coloredView.setDataListSize(20)
-//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 20",Toast.LENGTH_SHORT).show()
-//                    }
-//                    2 -> {
-//                        binding.coloredView.setDataListSize(35)
-//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 35",Toast.LENGTH_SHORT).show()
-//                    }
-//                    3 -> {
-//                        binding.coloredView.setDataListSize(40)
-//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 40",Toast.LENGTH_SHORT).show()
-//                    }
-//                    4 -> {
-//                        binding.coloredView.setDataListSize(46)
-//                        Toast.makeText(this@ConnectUSBActivity,"BinSize is 46",Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//
-//                // Increment the iteration or reset if it reaches 4
-//                iteration = if (iteration < 4) iteration + 1 else 1
-//
-//                // Call the same method after the delay
-//                handler.postDelayed(this, delay.toLong())
-//            }
-//        }, delay.toLong())
+
+
+
 
 
 
@@ -270,15 +303,19 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
         socket = Socket()
 
-//        val progressBar = findViewById<ProgressBar>(R.id.hori_progressBar)
-//        progressBar.max = 50
-//        var listSise =  progressBar.progress
-//          listSise = 2
-//
-//        // Example: Animate progress from 0 to 100 over 5 seconds
-//        val animator = ObjectAnimator.ofInt(progressBar, "progress", listSise, listSise)
-//        animator.duration = 5000 // 5000 milliseconds = 5 seconds
-//        animator.start()
+
+//        if (tcpClientService?.isFirstTimeComingFromTCPClient == true){
+//            runOnUiThread {
+//                Log.d("socktConnection",tcpClientService?.isFirstTimeComingFromTCPClient.toString())
+//                binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
+//            }
+//        } else{
+//            runOnUiThread {
+//                 //serverConnectionStatus()
+//                Log.d("socktConnection",tcpClientService?.isFirstTimeComingFromTCPClient.toString())
+//                binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+//            }
+//        }
 
 
         bookDetailsList = arrayListOf()
@@ -336,21 +373,30 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
 
         binding.btnBack.setOnClickListener {
+
+            //stopService()
             rfidTagNo.clear()
             list.clear()
             //rfidTemp.clear()
             binding.tvTotalCount.text=""
             binding.tvBookStatue.text = ""
             bookDetailsList.clear()
-
+            isActivityOnStop = true
             bookDetailsAdapter.notifyDataSetChanged()
 
+            //Intent(applicationContext, AppStart::class.java)
+
+           // tcpClientService.disconnectFromServer()
+           // tcpClientService?.stopTcpClient()
+            tcpClientService?.closeSocket()
+            //Intent(applicationContext, AppStart::class.java)
             val i = Intent(applicationContext, AppStart::class.java)
             i.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
             i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(i)
 
+            //finish()
         }
 
         binding.btnTest.setOnClickListener {
@@ -414,7 +460,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                     try {
                         val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
                         if(it.data?.body()?.title?.isNotEmpty() == true && it.data.body()?.accessNo?.isNotEmpty() == true){
-                            writeToFileExternal("returnBooksLog.txt",binding.tvRfid.text.toString(),it.data?.body()?.title.toString(),it.data?.body()?.accessNo.toString())
+
                             binding.tvTotalCount.isVisible = true
                             if (!bookDetailsList.contains(BookDetailsModel(it.data.body()?.accessNo.toString(), it.data?.body()?.title.toString()))) {
                             bookDetailsList.add(BookDetailsModel(it.data.body()?.accessNo.toString(), it.data.body()?.title.toString()))
@@ -426,6 +472,9 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                                     val rowCount = rfidDatabase.rfidDao().getCountOfBooks()
                                     binding.coloredView.setTotalRange(50)
                                     binding.coloredView.setDataListSize(rowCount)
+                                    runOnUiThread {
+                                        binding.tvTotalBookIn.text = "Total Book In Bin:$rowCount"
+                                    }
 
                                 }
 
@@ -461,6 +510,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                     //context?.toast("Book does not exist")
                    // context?.toast(it.message.toString())
                     Log.d("message", it.message.toString())
+                    writeToFileExternal("FetchBookByRfid.txt","Api:FetchBookByRfidNo",it.message.toString(),binding.tvRfid.text.toString())
 
                 }
                 is NetworkResult.Loading -> {
@@ -497,9 +547,10 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
             R.id.btn_print -> {
                 btnPrint!!.isEnabled = false
+                //createPdf(true)
                 es.submit(TaskPrint(mPos))
 
-                createPdf(true)
+
             }
             else -> {}
         }
@@ -526,9 +577,9 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                         .getBroadcast(this@ConnectUSBActivity, 0, Intent(this@ConnectUSBActivity.applicationInfo.packageName), 0)
                     if (!mUsbManager.hasPermission(device)){
                         mUsbManager.requestPermission(device, mPermissionIntent)
-                        Toast.makeText(applicationContext, "permission denied", Toast.LENGTH_LONG).show()
+                        //Toast.makeText(applicationContext, "permission denied", Toast.LENGTH_LONG).show()
                     } else {
-                        Toast.makeText(applicationContext, "Connecting...", Toast.LENGTH_SHORT).show()
+                        //Toast.makeText(applicationContext, "Connecting...", Toast.LENGTH_SHORT).show()
                         linearlayoutdevices!!.isEnabled = false
                         for (i in 0 until linearlayoutdevices!!.childCount) {
                             val btn = linearlayoutdevices!!.getChildAt(i) as Button
@@ -646,8 +697,8 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                     i.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
                     i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(i)
-
+//                    startActivity(i)
+                    finish()
                 }
                 mActivity!!.btnPrint!!.isEnabled = bIsOpened
             }
@@ -677,7 +728,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                 btn.isEnabled = false
             }
             binding.linearlayoutdevices.isVisible = false
-            Toast.makeText(mActivity, "Connected", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(mActivity, "Connected", Toast.LENGTH_SHORT).show()
             binding.imCropBox.setBackgroundResource(R.drawable.drop_box)
         }
     }
@@ -692,7 +743,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
                 val btn = linearlayoutdevices!!.getChildAt(i) as Button
                 btn.isEnabled = true
             }
-            Toast.makeText(mActivity, "Failed", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(mActivity, "Failed", Toast.LENGTH_SHORT).show()
             binding.imCropBox.setBackgroundResource(R.drawable.printer_not_connected)
         }
     }
@@ -901,55 +952,58 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
         return bitmap
     }
 
-    override fun passRfidTag(item: String) {
-        //getRealtimeDataIntegrated(item)
-        if(item.length<24){
-
-        } else if (!rfidTemp.contains(item)) {
-            binding.tvRfid.text = item
-            binding.searchView.text = item
-
-            CoroutineScope(Dispatchers.Default).launch {
-                val rfid = roomDbViewModel.findRfid(item)
-                try {
-                     if (rfid.rfidTagNo==item) {
-                         if (rfidTemp.size==rfidTemp.size) {
-                         }
-
-                        } else {
-                         bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
-                         bindObserverToGetResponse()
-
-                        }
-
-                } catch (e:Exception){
-                    Log.d("Exception",e.message.toString())
-                    bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
-                    bindObserverToGetResponse()
-                    Log.d("rfrmlvfm",item)
-                }
-            }
-        }
-
-
-    }
+//    override fun passRfidTag(item: String) {
+//        Log.d("item",item)
+//        //getRealtimeDataIntegrated(item)
+//       // Toast.makeText(applicationContext,item,Toast.LENGTH_SHORT).show()
+//        if(item.length<24){
+//
+//        } else if (!rfidTemp.contains(item)) {
+//            binding.tvRfid.text = item
+//            binding.searchView.text = item
+//
+//            CoroutineScope(Dispatchers.Default).launch {
+//                val rfid = roomDbViewModel.findRfid(item)
+//                try {
+//                     if (rfid.rfidTagNo==item) {
+//                         if (rfidTemp.size==rfidTemp.size) {
+//                         }
+//
+//                        } else {
+//                         bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
+//                         bindObserverToGetResponse()
+//
+//                        }
+//
+//                } catch (e:Exception){
+//                   // Log.d("Exception",e.message.toString())
+//                    bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(item))
+//                    bindObserverToGetResponse()
+//                    //Log.d("rfrmlvfm",item)
+//                }
+//            }
+//        }
+//
+//
+//    }
 
     override fun tcpConnection(connection: Boolean) {
 
         runOnUiThread {
             if (connection){
-                binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
+               // binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
                 Log.d("tcpConnectionFromService", connection.toString())
                 }
             else {
-                binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+               // binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
                 Log.d("tcpConnectionFromService", connection.toString())
             }
         }
     }
 
     override fun onBackPressed() {
-        Toast.makeText(applicationContext, "Back Button Disabled", Toast.LENGTH_SHORT).show()
+        //Toast.makeText(applicationContext, "Back Button Disabled", Toast.LENGTH_SHORT).show()
+
 
     }
 
@@ -1062,13 +1116,22 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
             when(it){
                 is NetworkResult.Success->{
                     binding.tvBookStatue.text = "Book Status: ${it.data}"
-                    Log.d("bookStatus",it.data.toString())
+                   // Log.d("bookStatus",it.data.toString())
+                    lifecycleScope.launch {
+                        val rowCount = rfidDatabase.rfidDao().getCountOfBooks()
+                        binding.coloredView.setTotalRange(50)
+                        binding.coloredView.setDataListSize(rowCount)
+                        runOnUiThread {
+                            binding.tvTotalBookIn.text = "Total Book In Bin:$rowCount"
+                        }
+
+                    }
 //                    it.data?.let { it1 -> context?.toast(it1) }
 //                    Log.d("manageBook",it.data.toString())
                 }
                 is NetworkResult.Error->{
                     Toast.makeText(this,it.message,Toast.LENGTH_SHORT).show()
-
+                    writeToFileExternal("MangeBookTransaction.txt","Api:ManageBookTransaction",it.message.toString(),binding.tvRfid.text.toString())
                 }
                 is NetworkResult.Loading->{
                     //showProgressbar()
@@ -1081,6 +1144,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
     override fun onRestart() {
         super.onRestart()
+
         rfidTagNo.clear()
         list.clear()
         //rfidTemp.clear()
@@ -1318,31 +1382,7 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
 
 
         }
-        // time count down for 5 seconds,
-        // with 1 second as countDown interval
-//        object : CountDownTimer(timer.toLong(), 1000) {
-//
-//
-//            // Callback function, fired on regular interval
-//            override fun onTick(millisUntilFinished: Long) {
-//                val tvTimer: MaterialTextView? = dialog.findViewById(R.id.tv_timer)
-//                tvTimer?.text = " " + millisUntilFinished / 1000
-//            }
-//
-//            // Callback function, fired
-//            // when the time is up
-//            override fun onFinish() {
-//                val i = Intent(applicationContext, AppStart::class.java)
-//                i.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
-//                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-//                i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-//                startActivity(i)
-//                dialog.dismiss()
-//
-//            //textView.setText("done!")
-//            }
-//
-//        }.start()
+
     }
 
     fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
@@ -1356,65 +1396,46 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
     }
 
 
-//    override fun onDestroy() {
-//        super.onDestroy()
+//
+//    override fun onStop() {
+//        super.onStop()
+//        tcpClientService?.closeConnection()
+//        tcpClientService?.disconnectFromServer()
+//        tcpClientService?.stopTcpClient()
 //
 //        if (isServiceBound) {
-//            tcpClientService.closeConnection() // Close the connection
+//           // tcpClientService.closeConnection() // Close the connection
 //            unbindService(serviceConnection)
 //            isServiceBound = false
 //        }
 //    }
 
-    override fun onPause() {
-        super.onPause()
-        tcpClientService.closeConnection()
-        tcpClientService.disconnectFromServer()
-        if (isServiceBound) {
-           // tcpClientService.closeConnection() // Close the connection
-            unbindService(serviceConnection)
-            isServiceBound = false
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        tcpClientService.closeConnection() // Close the connection
-        tcpClientService.disconnectFromServer()
-    }
 
 
 
 
-//    override fun onResume() {
-//        super.onResume()
-//        tcpClientService.reconnect()
-//    }
 
-    // TcpClientCallback methods
+
     override fun onConnected(isConnected: Boolean) {
         // Handle connection established
+        handleConnectionStatus(isConnected)
+        Log.d("conneted",isConnected.toString())
 
-        runOnUiThread {
-                if (isConnected==true){
-                    binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
-                    Log.d("tcpConnectionFromService", isConnected.toString())
-                }
-                else if (!isConnected) {
-                    binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
-                    Log.d("tcpConnectionFromService", isConnected.toString())
-                }
-            }
     }
 
     override fun onDisconnected(isConnected:Boolean) {
-        // Handle disconnection
-        runOnUiThread {
-            binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
-            Log.d("tcpConnectionFromService1", isConnected.toString())
-        }
-    }
+      //  handleConnectionStatus(isConnected)
 
+        if (!showPop){
+            showPop = true
+            runOnUiThread {
+              serverConnectionStatus()
+            }
+        }
+
+        Log.d("onConnected", isConnected.toString())
+
+    }
 
 
 
@@ -1427,64 +1448,75 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
        // runOnUiThread {
            // binding.txtString.text = data
 
-            if(data.length<24){
+        runOnUiThread {
+            //tcpClientService?.sendData("ReceivedEPC:$data")
+            bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
+            bindObserverToGetResponse()
+        }
 
-            } else if (!rfidTemp.contains(data)) {
-                binding.tvRfid.text = data
-                binding.searchView.text = data
-                RFIDNO = data
-
-                CoroutineScope(Dispatchers.Default).launch {
-                    val rfid = roomDbViewModel.findRfid(data)
-                    try {
-                        if (rfid.rfidTagNo==data) {
-                            if (rfidTemp.size==rfidTemp.size) {
-                                Snackbar.make(binding.root,"Book Already Return",Snackbar.LENGTH_SHORT).show()
-                            }
-
-                        } else if(rfid.rfidTagNo!=data || rfid.rfidTagNo.isNullOrEmpty()) {
-                            runOnUiThread {
-                                bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
-                                bindObserverToGetResponse()
-                            }
-
-                        }
-
-                    } catch (e:Exception){
-                        Log.d("Exception",e.message.toString())
-                        runOnUiThread {
-                            bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
-                            bindObserverToGetResponse()
-                        }
-                       // Log.d("rfrmlvfm",item)
-                    }
-                }
-            }
-
-
-            ///Toast.makeText(this,data,Toast.LENGTH_SHORT).show()
-       // }
+//        if (!tempRif.contains(data)){
+//
+//
+//        //Log.d("rfidNo",data)
+//            if(data.length<24){
+//
+//            } else if (!rfidTemp.contains(data)) {
+//                binding.tvRfid.text = data
+//                binding.searchView.text = data
+//                RFIDNO = data
+//
+//                CoroutineScope(Dispatchers.Default).launch {
+//                    val rfid = roomDbViewModel.findRfid(data)
+//                    try {
+//                        if (rfid.rfidTagNo==data) {
+//                            if (rfidTemp.size==rfidTemp.size) {
+//                                Snackbar.make(binding.root,"Book Already Return",Snackbar.LENGTH_SHORT).show()
+//                            }
+//
+//                        } else if(rfid.rfidTagNo!=data || rfid.rfidTagNo.isNullOrEmpty()) {
+//                            runOnUiThread {
+//                                bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
+//                                bindObserverToGetResponse()
+//                            }
+//
+//                        }
+//
+//                    } catch (e:Exception){
+//                       // Log.d("Exception",e.message.toString())
+//                        runOnUiThread {
+//                            bookDetailsViewModel.getBookInfo(GetRfidTagNoFromClientModel(data))
+//                            bindObserverToGetResponse()
+//                        }
+//                       // Log.d("rfrmlvfm",item)
+//                    }
+//                }
+//            }
+//
+//            tempRif.add(data)
+//            ///Toast.makeText(this,data,Toast.LENGTH_SHORT).show()
+//       // }
+//    }
     }
 
 
-    fun writeToFileExternal(fileName: String, rfid: String,bookName:String, accessCode: String) {
+    fun writeToFileExternal(fileName: String, Api: String,Error:String,RfidNo:String) {
         try {
-            val externalDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val externalDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val file = File(externalDir, fileName)
+
 
             // Use BufferedWriter for better performance
             val bufferedWriter = BufferedWriter(FileWriter(file, true))
 
-            // No need to check file length for duplicates
-
             // Write the data
-            bufferedWriter.write(rfid)
+            bufferedWriter.write(Api)
             bufferedWriter.write(" ")
-            bufferedWriter.write(bookName)
+            bufferedWriter.write(Error)
             bufferedWriter.write(" ")
-            bufferedWriter.write(accessCode)
+           bufferedWriter.write(RfidNo)
             bufferedWriter.newLine() // Use newLine() for appending a newline
             bufferedWriter.flush() // Flush to ensure the data is written immediately
+
 
             // Close the writer
             bufferedWriter.close()
@@ -1591,6 +1623,152 @@ class ConnectUSBActivity : AppCompatActivity(),PassData, View.OnClickListener, C
             .joinToString("")
     }
 
+//
+//    override fun onResume() {
+//        super.onResume()
+//        if (!connectionEstablished) {
+//            connectToServer()
+//            connectionEstablished = true
+//        }
+//    }
+
+
+//    override fun onResume() {
+//        super.onResume()
+//        if (!connectionEstablished && !isTcpclientConneted) {
+//           tcpClientService.reconnect()
+//            connectionEstablished = true
+//        }
+//    }
+    private fun connectToServer() {
+         tcpClientService?.reconnect()
+   // progressDialog.hide()
+
+    }
+
+    private fun handleConnectionStatus(isConnected: Boolean) {
+     synchronized(this) {
+            if (isConnected) {
+                runOnUiThread {
+                    //Toast.makeText(applicationContext, "Connected", Toast.LENGTH_SHORT).show()
+                    binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
+                    //progressDialog.hide()
+                }
+               // Log.d("isConnected", "TCP Connection established")
+            } else {
+
+                if (isConnected != isConnectedPreviously) { // Add this condition
+                    // Show toast only if connection state changes from connected to disconnected
+                    runOnUiThread {
+                       // progressDialog.show()
+                        //Toast.makeText(applicationContext, "Disconnected", Toast.LENGTH_SHORT).show()
+                       binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+                        //serverConnectionStatus()
+                    }
+                }
+
+
+               /* if (!isConnected && !isActivityOnStop) {
+
+                    runOnUiThread {
+                        binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+                    }
+                    tcpClientService?.connectToServer()
+                    Log.d("TAG", "TCP Connection established")
+                }
+                Log.d("TAG", "TCP Connection lost")*/
+
+            }
+
+            isConnectedPreviously = isConnected
+       }
+
+    }
+
+    private fun startReconnection(isConnected: Boolean) {
+        // Delay reconnection attempt by 2 seconds
+        reconnectHandler.postDelayed({
+            if (isConnected && !isActivityOnStop) {
+                connectToServer() // Attempt to reconnect
+
+            }
+        }, 2000) // Adjust the delay as per your requirement
+    }
+
+
+
+
+    override fun onStop() {
+        super.onStop()
+    }
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        tcpClientService?.closeSocket()
+        // Unbind from the service when activity is destroyed
+        if (isServiceBound) {
+           // unbindService(serviceConnection)
+            isServiceBound = false
+        }
+        // Stop the service when activity is destroyed
+        stopService()
+
+    }
+
+    fun stopService() {
+        // Check if the service is bound
+        if (isServiceBound) {
+            // Unbind from the service
+           // unbindService(serviceConnection)
+            isServiceBound = false
+        }
+        // Check if the service is running and stop it
+        if (!isChangingConfigurations && isServiceBound) {
+            // Stop the TcpClientService
+            stopService(Intent(this, TcpClientService::class.java))
+        }
+    }
+
+    private fun serverConnectionStatus() {
+        val builder = AlertDialog.Builder(this)
+        builder.setPositiveButton("Retry") { _, _ ->
+            showPop = false
+            tcpClientService?.connectToServer()
+            //finish()
+
+        }
+
+        builder.setTitle("Reader not connected")
+        builder.setCancelable(false)
+        builder.create().show()
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        // Reconnect to the server when the activity resumes
+    }
+
+
+    fun connectivityBackGroundChange(){
+        if (tcpClientService?.isFirstTimeComingFromTCPClient == true){
+            runOnUiThread {
+                Log.d("socktConnection",tcpClientService?.isFirstTimeComingFromTCPClient.toString())
+                binding.imConnectivity.setBackgroundResource(R.drawable.connectivity)
+            }
+        } else{
+            runOnUiThread {
+                serverConnectionStatus()
+                Log.d("socktConnection",tcpClientService?.isFirstTimeComingFromTCPClient.toString())
+                binding.imConnectivity.setBackgroundResource(R.drawable.not_connected)
+            }
+        }
+    }
+
 }
+
+
+
 
 

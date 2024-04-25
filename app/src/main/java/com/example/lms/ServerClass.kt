@@ -127,7 +127,7 @@ class ServerClass(val passData: PassData,val tcpConnection:PassData) : Service()
 
                                     }
                                     for(i in strRfid )
-                                    passData.passRfidTag(i.RFIDNo)
+                                   // passData.passRfidTag(i.RFIDNo)
                                     //passData.passRfidTag(bytesToHex(buffer).toUpperCase())
 
                                     Log.d("Server class", (bytesToHex(buffer).toUpperCase()))

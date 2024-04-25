@@ -1,9 +1,7 @@
 package com.example.lms
 
+//import com.example.lms.utils.PdfGenerator
 import android.Manifest
-import android.Manifest.permission.RECEIVE_BOOT_COMPLETED
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.Dialog
@@ -15,12 +13,9 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import android.view.*
 import android.widget.*
@@ -37,17 +32,15 @@ import com.csnprintersdk.csnio.CSNUSBPrinting
 import com.csnprintersdk.csnio.csnbase.CSNIOCallBack
 import com.example.lms.BookDetails.ConnectUSBActivity
 import com.example.lms.BookDetails.room_view_model.RoomDbViewModel
-import com.example.lms.getrfid.PassData
 import com.example.lms.helpers.RPdfGenerator
 import com.example.lms.helpers.RPdfGeneratorModel
 import com.example.lms.helpers.RTransaction
+import com.example.lms.tcp_clinet.TcpClientService
 import com.example.lms.utils.Cons
-//import com.example.lms.utils.PdfGenerator
 import com.example.lms.utils.TaskOpen
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.rheyansh.helpers.RPermissionHelper
-import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -56,6 +49,7 @@ import kotlin.experimental.and
 
 
 class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
+
     private var linearlayoutdevices: LinearLayout? = null
     lateinit var clearButton:MaterialButton
     private var radio58: RadioButton? = null
@@ -98,8 +92,17 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
     override fun onCreate(savedInstanceState: Bundle?) {
          super.onCreate(savedInstanceState)
          setContentView(R.layout.start_private)
+
+
+
          //pdfGenerator = PdfGenerator(this)
-        createPdf(false)
+//        val pendingIntent = PendingIntent.getActivity(
+//            context,
+//            requestCode,
+//            intent,
+//            PendingIntent.FLAG_MUTABLE
+//        )
+      //  createPdf(false)
 
 
 
@@ -145,12 +148,11 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
          mPos.Set(mUsb)
         // mUsb.SetCallBack(this)
          probe()
-         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
-
-         } else {
-             finish()
-         }
-
+//         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+//
+//         } else {
+//             finish()
+//         }
 
 
 
@@ -164,6 +166,7 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
 //        }
 
         roomDbViewModel.readAllData.observe(this , Observer {
+
             if (it.size<=50){
 
             } else{
@@ -274,7 +277,7 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
         val etRestId = dialog.findViewById<TextInputEditText>(R.id.et_reset_id)
         reset?.setOnClickListener {
             if (etRestId.text?.isNotEmpty() == true) {
-                if (etRestId.text.toString()=="@#Hisar23") {
+                if (etRestId.text.toString()=="12345678") {
                     dialog.dismiss()
 
 
@@ -317,8 +320,9 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
     private fun deleteAllRfid() {
         val builder = AlertDialog.Builder(this)
         builder.setPositiveButton("Yes") { _, _ ->
-            es.submit(TaskPrint(mPos))
-             createPdf(true)
+
+            //es.submit(TaskPrint(mPos))
+            createPdf(true)
 //            roomDbViewModel.deleteAllRfid()
 //            roomDbViewModel.deleteAllBookDetails()
            // Toast.makeText(this, "Successfully removed everything", Toast.LENGTH_SHORT).show()
@@ -357,8 +361,8 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
             mActivity!!.runOnUiThread {
                 if (bPrintResult != null) {
                     val toastMessage = if (bPrintResult >= 0) {
-                        roomDbViewModel.deleteAllRfid()
-                        roomDbViewModel.deleteAllBookDetails()
+//                        roomDbViewModel.deleteAllRfid()
+//                        roomDbViewModel.deleteAllBookDetails()
                         //deleteAllRfid()
                         resources.getString(R.string.printsuccess) + " " + ResultCodeToString(bPrintResult)
                     } else {
@@ -463,6 +467,7 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
                                         pos.POS_TextOut("   ${it.AccessNo}\r\n", 3, 0, 0, 0, 0, 0)
                                         totalBookReturnList.add(it.Title)
                                         totalBookReturnList.add(it.AccessNo)
+
                                        // pdfGenerator.generatePdf(this,"Total Return Books",totalBookReturnList,)
                                     }
                                     pos.POS_TextOut("   Total Rfid No: ${it.size}\r\n", 3, 0, 0, 0, 0, 0)
@@ -532,11 +537,11 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
                 val btDevice = Button(linearlayoutdevices!!.context)
                 btDevice.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 btDevice.gravity = (Gravity.CENTER_VERTICAL or Gravity.LEFT)
-                btDevice.text = String.format(" VID:%04X PID:%04X", device.vendorId, device.productId)
+                btDevice.text = String.format("VID:%04X PID:%04X", device.vendorId, device.productId)
+
                 //btDevice.setOnClickListener {
 
-                val mPermissionIntent = PendingIntent
-                    .getBroadcast(this@AppStart, 0, Intent(this@AppStart.applicationInfo.packageName), 0)
+                val mPermissionIntent = PendingIntent.getBroadcast(this@AppStart, 0, Intent(this@AppStart.applicationInfo.packageName), 0)
                 if (!mUsbManager.hasPermission(device)){
                     mUsbManager.requestPermission(device, mPermissionIntent)
                     Toast.makeText(applicationContext, "permission denied", Toast.LENGTH_LONG).show()
@@ -565,13 +570,13 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
      }
 
      override fun OnOpenFailed() {
-         this.runOnUiThread {
+         runOnUiThread {
              Toast.makeText(mActivity, "Failed", Toast.LENGTH_SHORT).show()
          }
      }
 
      override fun OnClose() {
-         this.runOnUiThread {
+         runOnUiThread {
              probe()
          }
      }
@@ -647,10 +652,15 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
     }
 
 
-
     fun createPdf(download: Boolean) {
+        val permissionHelper = RPermissionHelper(
+            this,
+            arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ), 100
+        )
 
-        val permissionHelper = RPermissionHelper(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), 100)
         permissionHelper.denied {
             if (it) {
                 Log.d("Permission check", "Permission denied by system")
@@ -660,54 +670,121 @@ class AppStart :  AppCompatActivity(), View.OnClickListener,CSNIOCallBack {
             }
         }
 
-//Request all permission
+        // Request all permissions
         permissionHelper.requestAll {
             Log.d("Permission check", "All permission granted")
 
             if (!isGenerating && download) {
                 isGenerating = true
+                es.submit(TaskPrint(mPos))
+                val pdfModel = RPdfGeneratorModel(ArrayList(), "Your Header")
 
-
-//                val pdfModeltwo = RPdfGeneratorModeltwo(listOf(), "Your Header")
-//
-//
-//                val randomDataList = generateRandomData()
-//
-//                for ((index, data) in randomDataList.withIndex()) {
-//                    println("Data #$index: $data")
-//                    pdfModeltwo.list.add(data)
-//                }
-
-                roomDbViewModel.readAllBookDetails.observe(this , Observer {
-                    it.forEach {
-                        val newTransaction = RTransaction()
-                        newTransaction.Date = it.date
-                        newTransaction.AccessNo = it.AccessNo
-                        newTransaction.BookName = it.Title.toString()
-                        newTransaction.RFIDNI = it.RfifdNo
+                roomDbViewModel.readAllBookDetails.observe(this, Observer { bookDetails ->
+                    bookDetails.forEach { bookDetail ->
+                        val newTransaction = RTransaction().apply {
+                            Date = bookDetail.date
+                            AccessNo = bookDetail.AccessNo
+                            BookName = bookDetail.Title ?: ""
+                            RFIDNI = bookDetail.RfifdNo ?: ""
+                        }
                         pdfModel.list.add(newTransaction)
-
+                        //Log.d("newTransaction", newTransaction.AccessNo)
                     }
+
+                    // Generate PDF only after all data is collected
+                    RPdfGenerator.generatePdf(this, pdfModel)
+
+                    Log.d("pdfModel", pdfModel.toString())
+                    //roomDbViewModel.deleteAllRfid()
+                    //roomDbViewModel.deleteAllBookDetails()
+                    // Use a handler to set isGenerating to false after a delay
+                    val handler = Handler()
+                    val runnable = Runnable {
+                        // Reset isGenerating to false after PDF generation
+                        isGenerating = false
+                    }
+                    handler.postDelayed(runnable, 2000)
                 })
-                RPdfGenerator.generatePdf(this, pdfModel)
-
-                //RPdfGenerator.generatePdf(this, dummyInfo)
-
-                val handler = Handler()
-                val runnable = kotlinx.coroutines.Runnable {
-                    //to avoid multiple generation at the same time. Set isGenerating = false on some delay
-                    isGenerating = false
-                }
-                handler.postDelayed(runnable, 2000)
             }
         }
 
-//Request individual permission
+        // Request individual permission
         permissionHelper.requestIndividual {
             Log.d("Permission check", "Individual Permission Granted")
         }
+
+           roomDbViewModel.deleteAllRfid()
+           roomDbViewModel.deleteAllBookDetails()
     }
 
+
+
+
+//    fun createPdf(download: Boolean) {
+//
+//        val permissionHelper = RPermissionHelper(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), 100)
+//        permissionHelper.denied {
+//            if (it) {
+//                Log.d("Permission check", "Permission denied by system")
+//                permissionHelper.openAppDetailsActivity()
+//            } else {
+//                Log.d("Permission check", "Permission denied")
+//            }
+//        }
+//
+////Request all permission
+//        permissionHelper.requestAll {
+//            Log.d("Permission check", "All permission granted")
+//
+//            if (!isGenerating && download) {
+//                isGenerating = true
+//
+//
+////                val pdfModeltwo = RPdfGeneratorModeltwo(listOf(), "Your Header")
+////
+////
+////                val randomDataList = generateRandomData()
+////
+////                for ((index, data) in randomDataList.withIndex()) {
+////                    println("Data #$index: $data")
+////                    pdfModeltwo.list.add(data)
+////                }
+//
+//                roomDbViewModel.readAllBookDetails.observe(this , Observer {
+//                    it.forEach {
+//                        val newTransaction = RTransaction()
+//                        newTransaction.Date = it.date
+//                        newTransaction.AccessNo = it.AccessNo
+//                        newTransaction.BookName = it.Title.toString()
+//                        newTransaction.RFIDNI = it.RfifdNo
+//                        pdfModel.list.add(newTransaction)
+//                         Log.d("newTransaction",newTransaction.AccessNo)
+//                    }
+//                })
+//                RPdfGenerator.generatePdf(this, pdfModel)
+//
+//                Log.d("pdfModel",pdfModel.toString())
+//
+//                //RPdfGenerator.generatePdf(this, dummyInfo)
+//
+//                val handler = Handler()
+//                val runnable = kotlinx.coroutines.Runnable {
+//                    //to avoid multiple generation at the same time. Set isGenerating = false on some delay
+//                    isGenerating = false
+//                }
+//                handler.postDelayed(runnable, 2000)
+//            }
+//
+////            roomDbViewModel.deleteAllRfid()
+////            roomDbViewModel.deleteAllBookDetails()
+//        }
+//
+////Request individual permission
+//        permissionHelper.requestIndividual {
+//            Log.d("Permission check", "Individual Permission Granted")
+//        }
+//    }
+//
 
 
 
